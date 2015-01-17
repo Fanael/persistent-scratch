@@ -1,0 +1,292 @@
+;;; persistent-scratch.el --- (Auto-)save the scratch buffer(s) to a file -*- lexical-binding: t -*-
+
+;; Author: Fanael Linithien <fanael4@gmail.com>
+;; URL: https://github.com/Fanael/persistent-scratch
+;; Package-Version: 0.1
+;; Package-Requires: ((emacs "24"))
+
+;; This file is NOT part of GNU Emacs.
+
+;; Copyright (c) 2015, Fanael Linithien
+;; All rights reserved.
+;;
+;; Redistribution and use in source and binary forms, with or without
+;; modification, are permitted provided that the following conditions are
+;; met:
+;;
+;;   * Redistributions of source code must retain the above copyright
+;;     notice, this list of conditions and the following disclaimer.
+;;   * Redistributions in binary form must reproduce the above copyright
+;;     notice, this list of conditions and the following disclaimer in the
+;;     documentation and/or other materials provided with the distribution.
+;;
+;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+;; IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+;; TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+;; PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+;; OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+;; EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+;; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+;; PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+;; LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+;; NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+;;; Commentary:
+
+;; Save/restore the state of scratch buffers to/from a file, with autosaving and
+;; backups.
+;;
+;; Save scratch buffers: `persistent-scratch-save' and
+;; `persistent-scratch-save-to-file'.
+;; Restore saved state: `persistent-scratch-restore' and
+;; `persistent-scratch-restore-from-file'.
+;;
+;; To control where the state is saved, set `persistent-scratch-save-file'.
+;; What exactly is saved is determined by `persistent-scratch-what-to-save'.
+;; What buffers are considered scratch buffers is determined by
+;; `persistent-scratch-scratch-buffer-p-function'. By default, only the
+;; `*scratch*' buffer is a scratch buffer.
+;;
+;; Autosave can be enabled by turning `persistent-scratch-autosave-mode' on.
+;;
+;; Backups of old saved states are off by default, set
+;; `persistent-scratch-backup-directory' to a directory to enable them.
+;;
+;; If restore on Emacs start is desired, it's a good idea to use
+;; `ignore-errors', because `persistent-scratch-restore' signals when the save
+;; file is not found. Thus, the init file should contain something like:
+;;   (ignore-errors (persistent-scratch-restore))
+
+;;; Code:
+
+(defgroup persistent-scratch nil
+  "Save the state of scratch buffers to a file."
+  :group 'files
+  :prefix "persistent-scratch-")
+
+(defcustom persistent-scratch-scratch-buffer-p-function
+  #'persistent-scratch-default-scratch-buffer-p
+  "Function determining whether the current buffer is a scratch buffer.
+When this function, called with no arguments, returns non-nil, the current
+buffer is assumed to be a scratch buffer, thus becoming eligible for
+\(auto-)saving."
+  :type 'function
+  :group 'persistent-scratch)
+
+(defcustom persistent-scratch-save-file
+  (expand-file-name ".persistent-scratch" user-emacs-directory)
+  "File to save to the scratch buffers to.
+When nil, scratch buffer saving is disabled."
+  :type '(choice file
+                 (const :tag "Disabled" nil))
+  :group 'persistent-scratch)
+
+(defcustom persistent-scratch-what-to-save
+  '(major-mode point narrowing)
+  "Specify what scratch buffer properties to save.
+
+The buffer name and the buffer contents are always saved.
+
+It's a list containing some or all of the following values:
+ - `major-mode': save the the major mode.
+ - `point': save the positions of `point' and `mark'.
+ - `narrowing': save the region the buffer is narrowed to.
+ - `text-properties': save the text properties of the buffer contents."
+  :type '(repeat :tag "What to save"
+                 (choice :tag "State to save"
+                         (const :tag "Major mode"
+                                major-mode)
+                         (const :tag "Point and mark"
+                                point)
+                         (const :tag "Narrowing"
+                                narrowing)
+                         (const :tag "Text properties of contents"
+                                text-properties)))
+  :group 'persistent-scratch)
+
+(defcustom persistent-scratch-autosave-interval 300
+  "The interval, in seconds, between autosaves of scratch buffers.
+When nil, scratch buffer autosave is disabled.
+
+Setting this variable when `persistent-scratch-mode' is already on does nothing,
+call `persistent-scratch-mode' for it to take effect."
+  :type '(choice number
+                 (const :tag "Disabled" nil))
+  :group 'persistent-scratch)
+
+(defcustom persistent-scratch-backup-directory nil
+  "Directory to save old versions of scratch buffer saves to.
+When nil, backups are disabled."
+  :type '(choice directory
+                 (const :tag "Disabled" nil))
+  :group 'persistent-scratch)
+
+;;;###autoload
+(defun persistent-scratch-save (&optional file)
+  "Save the current state of scratch buffers.
+When FILE is non-nil, the state is saved to FILE; when nil or when called
+interactively, the state is saved to `persistent-scratch-save-file'.
+What state exactly is saved is determined by `persistent-scratch-what-to-save'.
+
+When FILE is nil and `persistent-scratch-backup-directory' is non-nil, a copy of
+`persistent-scratch-save-file' is stored in that directory, with a name
+representing the time of the last `persistent-scratch-new-backup' call."
+  (interactive)
+  (let ((file-name (or file persistent-scratch-save-file)))
+    (when file-name
+      (let ((tmp-file-name (concat file-name ".new")))
+        (let ((str (persistent-scratch--save-state-to-string)))
+          (with-file-modes #o600
+            (write-region str nil file)))
+        (rename-file tmp-file-name file-name t))
+      (unless file
+        (persistent-scratch--update-backup)))))
+
+;;;###autoload
+(defun persistent-scratch-save-to-file (file)
+  "Save the current state of scratch buffers.
+The state is saved to FILE.
+
+See `persistent-scratch-save'."
+  (interactive "F")
+  (persistent-scratch-save file))
+
+;;;###autoload
+(defun persistent-scratch-restore (&optional file)
+  "Restore the scratch buffers.
+Load FILE and restore all saved buffers to their saved state.
+
+FILE is a file to restore scratch buffers from; when nil or when called
+interactively, `persistent-scratch-save-file' is used.
+
+This is a potentially destructive operation: if there's an open buffer with the
+same name as a saved buffer, the contents of that buffer will be overwritten."
+  (interactive)
+  (let ((save-data
+         (read
+          (with-temp-buffer
+            (insert-file-contents (or file persistent-scratch-save-file))
+            (buffer-string)))))
+    (dolist (saved-buffer save-data)
+      (with-current-buffer (get-buffer-create (aref saved-buffer 0))
+        (erase-buffer)
+        (insert (aref saved-buffer 1))
+        (funcall (or (aref saved-buffer 3) #'fundamental-mode))
+        (let ((point-and-mark (aref saved-buffer 2)))
+          (when point-and-mark
+            (goto-char (car point-and-mark))
+            (set-mark (cdr point-and-mark))))
+        (let ((narrowing (aref saved-buffer 4)))
+          (when narrowing
+            (narrow-to-region (car narrowing) (cdr narrowing))))))))
+
+;;;###autoload
+(defun persistent-scratch-restore-from-file (file)
+  "Restore the scratch buffers from a file.
+FILE is a file storing saved scratch buffer state.
+
+See `persistent-scratch-restore'."
+  (interactive "f")
+  (persistent-scratch-restore file))
+
+;;;###autoload
+(define-minor-mode persistent-scratch-autosave-mode
+  "Autosave scratch buffer state.
+Every `persistent-scratch-autosave-interval' seconds and when Emacs quits, the
+state of all active scratch buffers is saved.
+This uses `persistent-scratch-save', which see.
+
+Toggle Persistent-Scratch-Autosave mode on or off.
+With a prefix argument ARG, enable Persistent-Scratch-Autosave mode if ARG is
+positive, and disable it otherwise. If called from Lisp, enable the mode if ARG
+is omitted or nil, and toggle it if ARG is `toggle'.
+\\{persistent-scratch-autosave-mode-map}"
+  :init-value nil
+  :lighter ""
+  :keymap nil
+  :global t
+  (persistent-scratch--turn-autosave-off)
+  (when persistent-scratch-autosave-mode
+    (persistent-scratch--turn-autosave-on)))
+
+(defvar persistent-scratch--current-backup-time (current-time))
+
+;;;###autoload
+(defun persistent-scratch-new-backup ()
+  "Create a new scratch buffer save backup file.
+The next time `persistent-scratch-save' is called, it will create a new backup
+file and use that file from now on."
+  (interactive)
+  (setq persistent-scratch--current-backup-time (current-time)))
+
+(defun persistent-scratch-default-scratch-buffer-p ()
+  "Return non-nil iff the current buffer's name is *scratch*."
+  (string= (buffer-name) "*scratch*"))
+
+(defun persistent-scratch--save-state-to-string ()
+  "Save the current state of scratch buffers to a string."
+  (let ((save-data '()))
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (when (funcall persistent-scratch-scratch-buffer-p-function)
+          (push (persistent-scratch--get-buffer-state) save-data))))
+    (let ((print-quoted t)
+          (print-circle t)
+          (print-gensym t)
+          (print-length nil)
+          (print-level nil))
+      (prin1-to-string save-data))))
+
+(defun persistent-scratch--get-buffer-state ()
+  "Get an object representing the current buffer save state.
+The returned object is printable and readable.
+The exact format is undocumented, but must be kept in sync with what
+`persistent-scratch-restore' expects."
+  (vector
+   (buffer-name)
+   (save-restriction
+     (widen)
+     (if (memq 'text-properties persistent-scratch-what-to-save)
+         (buffer-string)
+       (buffer-substring-no-properties 1 (1+ (buffer-size)))))
+   (when (memq 'point persistent-scratch-what-to-save)
+     (cons (point) (mark)))
+   (when (memq 'major-mode persistent-scratch-what-to-save)
+     major-mode)
+   (when (and (buffer-narrowed-p)
+              (memq 'narrowing persistent-scratch-what-to-save))
+     (cons (point-min) (point-max)))))
+
+(defun persistent-scratch--update-backup ()
+  "Copy the save file to the backup directory."
+  (when persistent-scratch-backup-directory
+    (let ((original-name persistent-scratch-save-file)
+          (new-name
+           (let ((file-name
+                  (format-time-string
+                   "%Y-%m-%d--%H-%M-%S-%N"
+                   persistent-scratch--current-backup-time)))
+             (expand-file-name file-name persistent-scratch-backup-directory))))
+      (make-directory persistent-scratch-backup-directory t)
+      (copy-file original-name new-name t nil t t))))
+
+(defvar persistent-scratch--autosave-timer nil)
+
+(defun persistent-scratch--turn-autosave-off ()
+  "Turn `persistent-scratch-autosave-mode' off."
+  (remove-hook 'kill-emacs-hook #'persistent-scratch-save)
+  (when persistent-scratch--autosave-timer
+    (cancel-timer persistent-scratch--autosave-timer)
+    (setq persistent-scratch--autosave-timer nil)))
+
+(defun persistent-scratch--turn-autosave-on ()
+  "Turn `persistent-scratch-autosave-mode' on."
+  (add-hook 'kill-emacs-hook #'persistent-scratch-save)
+  (when persistent-scratch-autosave-interval
+    (setq persistent-scratch--autosave-timer
+          (let ((x persistent-scratch-autosave-interval))
+            (run-with-timer x x #'persistent-scratch-save)))))
+
+(provide 'persistent-scratch)
+;;; persistent-scratch.el ends here
