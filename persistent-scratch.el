@@ -1,4 +1,4 @@
-;;; persistent-scratch.el --- (Auto-)save the scratch buffer(s) to a file -*- lexical-binding: t -*-
+;;; persistent-scratch.el --- Preserve the scratch buffer across Emacs sessions -*- lexical-binding: t -*-
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
@@ -34,8 +34,8 @@
 
 ;;; Commentary:
 
-;; Save/restore the state of scratch buffers to/from a file, with autosaving and
-;; backups.
+;; Preserve the state of scratch buffers across Emacs sessions, by saving the
+;; state to and restoring it from a file, with autosaving and backups.
 ;;
 ;; Save scratch buffers: `persistent-scratch-save' and
 ;; `persistent-scratch-save-to-file'.
@@ -61,7 +61,7 @@
 ;;; Code:
 
 (defgroup persistent-scratch nil
-  "Save the state of scratch buffers to a file."
+  "Preserve the state of scratch buffers across Emacs sessions."
   :group 'files
   :prefix "persistent-scratch-")
 
