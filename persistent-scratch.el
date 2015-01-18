@@ -136,9 +136,12 @@ representing the time of the last `persistent-scratch-new-backup' call."
   (let ((file-name (or file persistent-scratch-save-file)))
     (when file-name
       (let ((tmp-file-name (concat file-name ".new")))
-        (let ((str (persistent-scratch--save-state-to-string)))
-          (with-file-modes #o600
-            (write-region str nil file)))
+        (let ((str (persistent-scratch--save-state-to-string))
+              (old-umask (default-file-modes)))
+          (set-default-file-modes #o600)
+          (unwind-protect
+              (write-region str nil file)
+            (set-default-file-modes old-umask)))
         (rename-file tmp-file-name file-name t))
       (unless file
         (persistent-scratch--update-backup)))))
