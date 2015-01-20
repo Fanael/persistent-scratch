@@ -65,11 +65,7 @@ Autosave can be enabled automatically like any other minor mode:
 (persistent-scratch-autosave-mode 1)
 ```
 
-If you want the scratch buffers to be restored on Emacs start, the
-`persistent-scratch-restore` call in the init file should be wrapped in
-`ignore-errors` or `with-demoted-errors`, as `persistent-scratch-restore`
-signals when `persistent-scratch-save-file` is not found. For example:
-```emacs-lisp
-(with-demoted-errors "Failed to restore scratch buffers: %S"
-  (persistent-scratch-restore))
-```
+If you want the scratch buffers to be restored on Emacs start, use
+`persistent-scratch-restore-if-possible`, which, unlike
+`persistent-scratch-restore`, doesn't signal an error if the save file cannot be
+read.
