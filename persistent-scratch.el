@@ -107,12 +107,10 @@ It's a list containing some or all of the following values:
 
 (defcustom persistent-scratch-autosave-interval 300
   "The interval, in seconds, between autosaves of scratch buffers.
-When nil, scratch buffer autosave is disabled.
 
 Setting this variable when `persistent-scratch-mode' is already on does nothing,
 call `persistent-scratch-mode' for it to take effect."
-  :type '(choice number
-                 (const :tag "Disabled" nil))
+  :type 'number
   :group 'persistent-scratch)
 
 (defcustom persistent-scratch-backup-directory nil
@@ -290,10 +288,9 @@ The exact format is undocumented, but must be kept in sync with what
 (defun persistent-scratch--turn-autosave-on ()
   "Turn `persistent-scratch-autosave-mode' on."
   (add-hook 'kill-emacs-hook #'persistent-scratch-save)
-  (when persistent-scratch-autosave-interval
-    (setq persistent-scratch--autosave-timer
-          (let ((x persistent-scratch-autosave-interval))
-            (run-with-timer x x #'persistent-scratch-save)))))
+  (setq persistent-scratch--autosave-timer
+        (let ((x persistent-scratch-autosave-interval))
+          (run-with-timer x x #'persistent-scratch-save))))
 
 (provide 'persistent-scratch)
 ;;; persistent-scratch.el ends here
