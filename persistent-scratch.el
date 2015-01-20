@@ -196,6 +196,17 @@ See `persistent-scratch-restore'."
   (persistent-scratch-restore file))
 
 ;;;###autoload
+(defun persistent-scratch-restore-if-possible (&optional file)
+  "Restore the scratch buffers if possible.
+
+Unlike `persistent-scratch-restore', which see for more details and for the
+meaning of FILE, any errors are silenced.
+If this is not desired, use `persistent-scratch-restore' instead.
+
+This function is indented to be used only in the user's initialization files."
+  (ignore-errors (persistent-scratch-restore file)))
+
+;;;###autoload
 (define-minor-mode persistent-scratch-autosave-mode
   "Autosave scratch buffer state.
 Every `persistent-scratch-autosave-interval' seconds and when Emacs quits, the
