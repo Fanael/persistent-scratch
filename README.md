@@ -55,6 +55,16 @@ buffers are considered scratch buffers and whether to backup old saved states:
 
     M-x customize-group RET persistent-scratch RET
 
+## Init file considerations
+
+Variables can be customized either via `customize` or by setting them via `setq`
+directly.
+
+Autosave can be enabled automatically like any other minor mode:
+```emacs-lisp
+(persistent-scratch-autosave-mode 1)
+```
+
 If you want the scratch buffers to be restored on Emacs start, the
 `persistent-scratch-restore` call in the init file should be wrapped in
 `ignore-errors` or `with-demoted-errors`, as `persistent-scratch-restore`
