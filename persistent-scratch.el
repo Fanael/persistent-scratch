@@ -149,7 +149,8 @@ representing the time of the last `persistent-scratch-new-backup' call."
   "Save the current state of scratch buffers.
 The state is saved to FILE.
 
-When called interactively, prompt for the file name.
+When called interactively, prompt for the file name, which is the only
+difference between this function and `persistent-scratch-save'.
 
 See `persistent-scratch-save'."
   (interactive "F")
@@ -189,7 +190,8 @@ same name as a saved buffer, the contents of that buffer will be overwritten."
   "Restore the scratch buffers from a file.
 FILE is a file storing saved scratch buffer state.
 
-When called interactively, prompt for the file name.
+When called interactively, prompt for the file name, which is the only
+differente between this function and `persistent-scratch-restore'.
 
 See `persistent-scratch-restore'."
   (interactive "f")
