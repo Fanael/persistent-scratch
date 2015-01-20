@@ -60,12 +60,19 @@ buffers are considered scratch buffers and whether to backup old saved states:
 Variables can be customized either via `customize` or by setting them via `setq`
 directly.
 
-Autosave can be enabled automatically like any other minor mode:
+To both enable autosave and restore the last saved state, if any, on Emacs
+start, add
+```emacs-lisp
+(persistent-scratch-setup-default)
+```
+to the init file. This will **not** error when the save file doesn't exist.
+
+To just enable autosave, enable `persistent-scratch-autosave-mode` like any
+other minor mode:
 ```emacs-lisp
 (persistent-scratch-autosave-mode 1)
 ```
 
-If you want the scratch buffers to be restored on Emacs start, use
-`persistent-scratch-restore-if-possible`, which, unlike
-`persistent-scratch-restore`, doesn't signal an error if the save file cannot be
-read.
+To just restore the last saved file, use `persistent-scratch-restore`. Bear in
+mind it may signal an error if there's no save file, so it's a good idea to call
+it inside `ignore-errors` or `with-demoted-errors`.

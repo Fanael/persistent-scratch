@@ -53,10 +53,13 @@
 ;; Backups of old saved states are off by default, set
 ;; `persistent-scratch-backup-directory' to a directory to enable them.
 ;;
-;; If restore on Emacs start is desired, it's a good idea to use
-;; `ignore-errors', because `persistent-scratch-restore' signals when the save
-;; file is not found. Thus, the init file should contain something like:
-;;   (ignore-errors (persistent-scratch-restore))
+;; To both enable autosave and restore the last saved state on Emacs start, add
+;;   (persistent-scratch-setup-default)
+;; to the init file. This will NOT error when the save file doesn't exist.
+;;
+;; To just restore on Emacs start, it's a good idea to call
+;; `persistent-scratch-restore' inside an `ignore-errors' or
+;; `with-demoted-errors' block.
 
 ;;; Code:
 
@@ -198,17 +201,6 @@ See `persistent-scratch-restore'."
   (persistent-scratch-restore file))
 
 ;;;###autoload
-(defun persistent-scratch-restore-if-possible (&optional file)
-  "Restore the scratch buffers if possible.
-
-Unlike `persistent-scratch-restore', which see for more details and for the
-meaning of FILE, any errors are silenced.
-If this is not desired, use `persistent-scratch-restore' instead.
-
-This function is indented to be used only in the user's initialization files."
-  (ignore-errors (persistent-scratch-restore file)))
-
-;;;###autoload
 (define-minor-mode persistent-scratch-autosave-mode
   "Autosave scratch buffer state.
 Every `persistent-scratch-autosave-interval' seconds and when Emacs quits, the
@@ -237,6 +229,15 @@ The next time `persistent-scratch-save' is called, it will create a new backup
 file and use that file from now on."
   (interactive)
   (setq persistent-scratch--current-backup-time (current-time)))
+
+;;;###autoload
+(defun persistent-scratch-setup-default ()
+  "Enable `persistent-scratch-autosave-mode' and restore the scratch buffers.
+When an error occurs while restoring the scratch buffers, it's demoted to a
+message."
+  (persistent-scratch-autosave-mode)
+  (with-demoted-errors "Failed to restore scratch buffers: %S"
+    (persistent-scratch-restore)))
 
 (defun persistent-scratch-default-scratch-buffer-p ()
   "Return non-nil iff the current buffer's name is *scratch*."
