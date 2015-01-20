@@ -34,7 +34,7 @@
 
 ;;; Commentary:
 
-;; Preserve the state of scratch buffers across Emacs sessions, by saving the
+;; Preserve the state of scratch buffers across Emacs sessions by saving the
 ;; state to and restoring it from a file, with autosaving and backups.
 ;;
 ;; Save scratch buffers: `persistent-scratch-save' and
