@@ -79,10 +79,8 @@ buffer is assumed to be a scratch buffer, thus becoming eligible for
 
 (defcustom persistent-scratch-save-file
   (expand-file-name ".persistent-scratch" user-emacs-directory)
-  "File to save to the scratch buffers to.
-When nil, scratch buffer saving is disabled."
-  :type '(choice file
-                 (const :tag "Disabled" nil))
+  "File to save to the scratch buffers to."
+  :type 'file
   :group 'persistent-scratch)
 
 (defcustom persistent-scratch-what-to-save
@@ -134,18 +132,17 @@ When FILE is nil and `persistent-scratch-backup-directory' is non-nil, a copy of
 `persistent-scratch-save-file' is stored in that directory, with a name
 representing the time of the last `persistent-scratch-new-backup' call."
   (interactive)
-  (let ((actual-file (or file persistent-scratch-save-file)))
-    (when actual-file
-      (let ((tmp-file (concat actual-file ".new")))
-        (let ((str (persistent-scratch--save-state-to-string))
-              (old-umask (default-file-modes)))
-          (set-default-file-modes #o600)
-          (unwind-protect
-              (write-region str nil tmp-file)
-            (set-default-file-modes old-umask)))
-        (rename-file tmp-file actual-file t))
-      (unless file
-        (persistent-scratch--update-backup)))))
+  (let* ((actual-file (or file persistent-scratch-save-file))
+         (tmp-file (concat actual-file ".new")))
+    (let ((str (persistent-scratch--save-state-to-string))
+          (old-umask (default-file-modes)))
+      (set-default-file-modes #o600)
+      (unwind-protect
+          (write-region str nil tmp-file)
+        (set-default-file-modes old-umask)))
+    (rename-file tmp-file actual-file t))
+  (unless file
+    (persistent-scratch--update-backup)))
 
 ;;;###autoload
 (defun persistent-scratch-save-to-file (file)
