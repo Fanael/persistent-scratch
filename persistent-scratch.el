@@ -138,7 +138,7 @@ representing the time of the last `persistent-scratch-new-backup' call."
           (old-umask (default-file-modes)))
       (set-default-file-modes #o600)
       (unwind-protect
-          (write-region str nil tmp-file)
+          (write-region str nil tmp-file nil 0)
         (set-default-file-modes old-umask)))
     (rename-file tmp-file actual-file t))
   (unless file
