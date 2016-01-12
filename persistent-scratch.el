@@ -191,7 +191,7 @@ same name as a saved buffer, the contents of that buffer will be overwritten."
 FILE is a file storing saved scratch buffer state.
 
 When called interactively, prompt for the file name, which is the only
-differente between this function and `persistent-scratch-restore'.
+different between this function and `persistent-scratch-restore'.
 
 See `persistent-scratch-restore'."
   (interactive "f")
