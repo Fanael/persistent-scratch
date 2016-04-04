@@ -2,7 +2,7 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.2.4
+;; Package-Version: 0.2.5
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -260,9 +260,13 @@ message."
 ;;;###autoload
 (defun persistent-scratch-keep-n-newest-backups (n)
   "Return a backup filter that keeps N newest backups.
-The returned function is suitable for `persistent-scratch-backup-filter'."
+The returned function is suitable for `persistent-scratch-backup-filter'.
+
+Note: this function assumes that increasing time values result in
+lexicographically increasing file names when formatted using
+`persistent-scratch-backup-file-name-format'."
   (lambda (files)
-    (nthcdr n files)))
+    (nthcdr n (sort files (lambda (a b) (string-lessp b a))))))
 
 ;;;###autoload
 (defun persistent-scratch-keep-backups-not-older-than (diff)
