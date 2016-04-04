@@ -257,6 +257,33 @@ message."
   "Return non-nil iff the current buffer's name is *scratch*."
   (string= (buffer-name) "*scratch*"))
 
+;;;###autoload
+(defun persistent-scratch-keep-n-newest-backups (n)
+  "Return a backup filter that keeps N newest backups.
+The returned function is suitable for `persistent-scratch-backup-filter'."
+  (lambda (files)
+    (nthcdr n files)))
+
+;;;###autoload
+(defun persistent-scratch-keep-backups-not-older-than (diff)
+  "Return a backup filter that keeps backups newer than DIFF.
+DIFF may be either a number representing the number of second, or a time value
+in the format returned by `current-time' or `seconds-to-time'.
+The returned function is suitable for `persistent-scratch-backup-filter'.
+
+Note: this function assumes that increasing time values result in
+lexicographically increasing file names when formatted using
+`persistent-scratch-backup-file-name-format'."
+  (when (numberp diff)
+    (setq diff (seconds-to-time diff)))
+  (lambda (files)
+    (let ((limit (format-time-string persistent-scratch-backup-file-name-format
+                                     (time-subtract (current-time) diff))))
+      (delq nil (mapcar (lambda (file)
+                          (when (string-lessp file limit)
+                            file))
+                        files)))))
+
 (defun persistent-scratch--save-state-to-string ()
   "Save the current state of scratch buffers to a string."
   (let ((save-data '()))
