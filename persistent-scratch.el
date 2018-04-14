@@ -320,7 +320,7 @@ The exact format is undocumented, but must be kept in sync with what
          (buffer-string)
        (buffer-substring-no-properties 1 (1+ (buffer-size)))))
    (when (memq 'point persistent-scratch-what-to-save)
-     (cons (point) (mark)))
+     (cons (point) (ignore-errors (mark))))
    (when (memq 'major-mode persistent-scratch-what-to-save)
      major-mode)
    (when (and (buffer-narrowed-p)
