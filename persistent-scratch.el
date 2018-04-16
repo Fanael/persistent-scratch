@@ -2,7 +2,7 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.3
+;; Package-Version: 0.3.1
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -146,13 +146,15 @@ When FILE is nil and `persistent-scratch-backup-directory' is non-nil, a copy of
 representing the time of the last `persistent-scratch-new-backup' call."
   (interactive)
   (let* ((actual-file (or file persistent-scratch-save-file))
-         (tmp-file (concat actual-file ".new")))
-    (let ((str (persistent-scratch--save-state-to-string))
-          (old-umask (default-file-modes)))
-      (set-default-file-modes #o600)
-      (unwind-protect
-          (write-region str nil tmp-file nil 0)
-        (set-default-file-modes old-umask)))
+         (tmp-file (concat actual-file ".new"))
+	 (save-data (persistent-scratch--save-state-to-string))
+	 (str (cdr save-data))
+	 (buffer-file-coding-system (caar save-data))
+         (old-umask (default-file-modes)))
+    (set-default-file-modes #o600)
+    (unwind-protect
+        (write-region str nil tmp-file nil 0)
+      (set-default-file-modes old-umask))
     (rename-file tmp-file actual-file t))
   (unless file
     (persistent-scratch--update-backup)
@@ -294,17 +296,19 @@ lexicographically increasing file names when formatted using
 
 (defun persistent-scratch--save-state-to-string ()
   "Save the current state of scratch buffers to a string."
-  (let ((save-data '()))
+  (let ((save-data '())
+	save-data-file-coding-system)
     (dolist (buffer (buffer-list))
       (with-current-buffer buffer
         (when (funcall persistent-scratch-scratch-buffer-p-function)
-          (push (persistent-scratch--get-buffer-state) save-data))))
+          (push (persistent-scratch--get-buffer-state) save-data)
+	  (push buffer-file-coding-system save-data-file-coding-system))))
     (let ((print-quoted t)
           (print-circle t)
           (print-gensym t)
           (print-length nil)
           (print-level nil))
-      (prin1-to-string save-data))))
+      (cons save-data-file-coding-system (prin1-to-string save-data)))))
 
 (defun persistent-scratch--get-buffer-state ()
   "Get an object representing the current buffer save state.
