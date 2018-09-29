@@ -217,6 +217,18 @@ See `persistent-scratch-restore'."
   (interactive "f")
   (persistent-scratch-restore file))
 
+(defvar persistent-scratch--auto-restored nil)
+
+(defun persistent-scratch--auto-restore ()
+  "Automatically restore the scratch buffer once per session."
+  (unless persistent-scratch--auto-restored
+    (condition-case err
+        (persistent-scratch-restore)
+      (error
+       (message "Failed to restore scratch buffers: %S" err)
+       nil))
+    (setq persistent-scratch--auto-restored t)))
+
 ;;;###autoload
 (define-minor-mode persistent-scratch-autosave-mode
   "Autosave scratch buffer state.
@@ -233,6 +245,7 @@ is omitted or nil, and toggle it if ARG is `toggle'.
   :lighter ""
   :keymap nil
   :global t
+  (persistent-scratch--auto-restore)
   (persistent-scratch--turn-autosave-off)
   (when persistent-scratch-autosave-mode
     (persistent-scratch--turn-autosave-on)))
@@ -252,12 +265,8 @@ file and use that file from now on."
   "Enable `persistent-scratch-autosave-mode' and restore the scratch buffers.
 When an error occurs while restoring the scratch buffers, it's demoted to a
 message."
-  (persistent-scratch-autosave-mode)
-  (condition-case err
-      (persistent-scratch-restore)
-    (error
-     (message "Failed to restore scratch buffers: %S" err)
-     nil)))
+  (persistent-scratch--auto-restore)
+  (persistent-scratch-autosave-mode))
 
 (defun persistent-scratch-default-scratch-buffer-p ()
   "Return non-nil iff the current buffer's name is *scratch*."
