@@ -2,7 +2,7 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.3.2
+;; Package-Version: 0.3.3
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -313,6 +313,7 @@ lexicographically increasing file names when formatted using
     (let ((print-quoted t)
           (print-circle t)
           (print-gensym t)
+          (print-escape-newlines nil)
           (print-length nil)
           (print-level nil))
       (prin1-to-string save-data))))
