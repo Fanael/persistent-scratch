@@ -2,12 +2,12 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.3.3
+;; Package-Version: 0.3.4
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
 
-;; Copyright (c) 2015-2018, Fanael Linithien
+;; Copyright (c) 2015-2019, Fanael Linithien
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -154,7 +154,9 @@ representing the time of the last `persistent-scratch-new-backup' call."
           (let ((coding-system-for-write 'utf-8-unix))
             (write-region str nil tmp-file nil 0))
         (set-default-file-modes old-umask)))
-    (rename-file tmp-file actual-file t))
+    (rename-file tmp-file actual-file t)
+    (when (called-interactively-p 'interactive)
+      (message "Wrote persistent-scratch file %s" actual-file)))
   (unless file
     (persistent-scratch--update-backup)
     (persistent-scratch--cleanup-backups)))
@@ -228,6 +230,29 @@ See `persistent-scratch-restore'."
        (message "Failed to restore scratch buffers: %S" err)
        nil))
     (setq persistent-scratch--auto-restored t)))
+
+(defvar persistent-scratch-mode-map
+  (let ((m (make-sparse-keymap)))
+    (define-key m [remap save-buffer] 'persistent-scratch-save)
+    (define-key m [remap write-file] 'persistent-scratch-save-to-file)
+    m)
+  "The keymap for `persistent-scratch-mode'.")
+
+;;;###autoload
+(define-minor-mode persistent-scratch-mode
+  "Utility mode that remaps `save-buffer' and `write-file' to their
+`persistent-scratch' equivalents.
+
+This mode cannot be enabled in buffers for which
+`persistent-scratch-scratch-buffer-p-function' is nil.
+
+\\{persistent-scratch-mode-map}"
+  :lighter " PS"
+  (when (and persistent-scratch-mode
+             (not (funcall persistent-scratch-scratch-buffer-p-function)))
+    (setq persistent-scratch-mode nil)
+    (error
+     "This buffer isn't managed by `persistent-scratch', not enabling mode.")))
 
 ;;;###autoload
 (define-minor-mode persistent-scratch-autosave-mode
