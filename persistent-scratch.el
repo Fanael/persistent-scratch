@@ -154,7 +154,8 @@ representing the time of the last `persistent-scratch-new-backup' call."
           (let ((coding-system-for-write 'utf-8-unix))
             (write-region str nil tmp-file nil 0))
         (set-default-file-modes old-umask)))
-    (rename-file tmp-file actual-file t))
+    (when (interactive-p)
+      (message "Write file %s" actual-file)))
   (unless file
     (persistent-scratch--update-backup)
     (persistent-scratch--cleanup-backups)))
@@ -228,6 +229,21 @@ See `persistent-scratch-restore'."
        (message "Failed to restore scratch buffers: %S" err)
        nil))
     (setq persistent-scratch--auto-restored t)))
+
+(defvar persistent-scratch-mode-map
+  (let ((m (make-sparse-keymap)))
+    (define-key m [remap save-buffer] 'persistent-scratch-save)
+    (define-key m [remap write-file] 'persistent-scratch-save-to-file)
+    m)
+  "Keymap while persistent-scratch-minor-mode is active.")
+
+;;;###autoload
+(define-minor-mode persistent-scratch-mode
+  "Preserve the state of scratch buffers.
+
+Preserve the state of scratch buffers across Emacs sessions by saving the state
+to and restoring it from a file."
+  :lighter " PS")
 
 ;;;###autoload
 (define-minor-mode persistent-scratch-autosave-mode
