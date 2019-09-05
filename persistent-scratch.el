@@ -154,7 +154,8 @@ representing the time of the last `persistent-scratch-new-backup' call."
           (let ((coding-system-for-write 'utf-8-unix))
             (write-region str nil tmp-file nil 0))
         (set-default-file-modes old-umask)))
-    (when (interactive-p)
+    (rename-file tmp-file actual-file t)
+    (when (called-interactively-p 'interactive)
       (message "Write file %s" actual-file)))
   (unless file
     (persistent-scratch--update-backup)
