@@ -244,7 +244,11 @@ See `persistent-scratch-restore'."
 
 Preserve the state of scratch buffers across Emacs sessions by saving the state
 to and restoring it from a file."
-  :lighter " PS")
+  :lighter " PS"
+  (when persistent-scratch-mode
+    (unless (funcall persistent-scratch-scratch-buffer-p-function)
+      (setq  persistent-scratch-mode nil)
+      (user-error "This buffer isn't managed by `persistent-scratch' package. Mode isn't enabled"))))
 
 ;;;###autoload
 (define-minor-mode persistent-scratch-autosave-mode
