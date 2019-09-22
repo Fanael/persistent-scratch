@@ -109,8 +109,8 @@ It's a list containing some or all of the following values:
 (defcustom persistent-scratch-autosave-interval 300
   "The interval, in seconds, between autosaves of scratch buffers.
 
-Setting this variable when `persistent-scratch-mode' is already on does nothing,
-call `persistent-scratch-mode' for it to take effect."
+Setting this variable when `persistent-scratch-autosave-mode' is already on does
+nothing, call `persistent-scratch-autosave-mode' for it to take effect."
   :type 'number
   :group 'persistent-scratch)
 
