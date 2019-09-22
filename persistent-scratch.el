@@ -343,6 +343,14 @@ lexicographically increasing file names when formatted using
           (print-level nil))
       (prin1-to-string save-data))))
 
+;; Compatibility shim for Emacs 24.{1, 2}
+(defalias 'persistent-scratch-buffer-narrowed-p
+  (if (fboundp 'buffer-narrowed-p)
+      #'buffer-narrowed-p
+    (lambda ()
+      "Return non-nil if the current buffer is narrowed."
+      (< (- (point-min) (point-max)) (buffer-size)))))
+
 (defun persistent-scratch--get-buffer-state ()
   "Get an object representing the current buffer save state.
 The returned object is printable and readable.
@@ -360,7 +368,7 @@ The exact format is undocumented, but must be kept in sync with what
      (cons (point) (ignore-errors (mark))))
    (when (memq 'major-mode persistent-scratch-what-to-save)
      major-mode)
-   (when (and (buffer-narrowed-p)
+   (when (and (persistent-scratch-buffer-narrowed-p)
               (memq 'narrowing persistent-scratch-what-to-save))
      (cons (point-min) (point-max)))
    ;; Version 2 fields.
