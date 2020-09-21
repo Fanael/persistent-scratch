@@ -194,7 +194,9 @@ same name as a saved buffer, the contents of that buffer will be overwritten."
       (with-current-buffer (get-buffer-create (aref saved-buffer 0))
         (erase-buffer)
         (insert (aref saved-buffer 1))
-        (funcall (or (aref saved-buffer 3) #'fundamental-mode))
+        (let ((f (aref saved-buffer 3)))
+          (when f)
+          (funcall f))
         (let ((point-and-mark (aref saved-buffer 2)))
           (when point-and-mark
             (goto-char (car point-and-mark))
