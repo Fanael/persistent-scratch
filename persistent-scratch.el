@@ -2,12 +2,12 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.3.4
+;; Package-Version: 0.3.5
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
 
-;; Copyright (c) 2015-2019, Fanael Linithien
+;; Copyright (c) 2015-2020, Fanael Linithien
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -194,7 +194,7 @@ same name as a saved buffer, the contents of that buffer will be overwritten."
       (with-current-buffer (get-buffer-create (aref saved-buffer 0))
         (erase-buffer)
         (insert (aref saved-buffer 1))
-        (funcall (or (aref saved-buffer 3) #'fundamental-mode))
+        (funcall (or (aref saved-buffer 3) #'ignore))
         (let ((point-and-mark (aref saved-buffer 2)))
           (when point-and-mark
             (goto-char (car point-and-mark))
