@@ -2,12 +2,12 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.3.5
+;; Package-Version: 0.3.6
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
 
-;; Copyright (c) 2015-2020, Fanael Linithien
+;; Copyright (c) 2015-2022, Fanael Linithien
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -62,6 +62,7 @@
 ;; `with-demoted-errors' block.
 
 ;;; Code:
+(eval-when-compile (require 'pcase))
 
 (defgroup persistent-scratch nil
   "Preserve the state of scratch buffers across Emacs sessions."
@@ -109,9 +110,14 @@ It's a list containing some or all of the following values:
 (defcustom persistent-scratch-autosave-interval 300
   "The interval, in seconds, between autosaves of scratch buffers.
 
+Can be either a number N, in which case scratch buffers are saved every N
+seconds, or a cons cell (`idle' . N), in which case scratch buffers are saved
+every time Emacs becomes idle for at least N seconds.
+
 Setting this variable when `persistent-scratch-autosave-mode' is already on does
 nothing, call `persistent-scratch-autosave-mode' for it to take effect."
-  :type 'number
+  :type '(radio number
+                (cons :tag "When idle for" (const idle) number))
   :group 'persistent-scratch)
 
 (defcustom persistent-scratch-backup-directory nil
@@ -417,8 +423,9 @@ in the backup directory and deleting all returned file names."
   "Turn `persistent-scratch-autosave-mode' on."
   (add-hook 'kill-emacs-hook #'persistent-scratch-save)
   (setq persistent-scratch--autosave-timer
-        (let ((x persistent-scratch-autosave-interval))
-          (run-with-timer x x #'persistent-scratch-save))))
+        (pcase persistent-scratch-autosave-interval
+          (`(idle . ,x) (run-with-idle-timer x x #'persistent-scratch-save))
+          (x (run-with-timer x x #'persistent-scratch-save)))))
 
 (provide 'persistent-scratch)
 ;;; persistent-scratch.el ends here
