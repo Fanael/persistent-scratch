@@ -174,6 +174,7 @@ representing the time of the last `persistent-scratch-new-backup' call."
         (set-default-file-modes old-umask)))
     (run-hook-with-args 'persistent-scratch-before-save-commit-functions tmp-file)
     (rename-file tmp-file actual-file t)
+    (set-buffer-modified-p nil)
     (when (called-interactively-p 'interactive)
       (message "Wrote persistent-scratch file %s" actual-file)))
   (unless file
