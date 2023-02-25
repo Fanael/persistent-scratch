@@ -2,7 +2,7 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.3.8
+;; Package-Version: 0.3.9
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -164,17 +164,19 @@ When FILE is nil and `persistent-scratch-backup-directory' is non-nil, a copy of
 representing the time of the last `persistent-scratch-new-backup' call."
   (interactive)
   (let* ((actual-file (or file persistent-scratch-save-file))
-         (tmp-file (concat actual-file ".new")))
-    (let ((str (persistent-scratch--save-state-to-string))
-          (old-umask (default-file-modes)))
+         (tmp-file (concat actual-file ".new"))
+         (saved-state (persistent-scratch--save-buffers-state)))
+    (let ((old-umask (default-file-modes)))
       (set-default-file-modes #o600)
       (unwind-protect
           (let ((coding-system-for-write 'utf-8-unix))
-            (write-region str nil tmp-file nil 0))
+            (write-region (cdr saved-state) nil tmp-file nil 0))
         (set-default-file-modes old-umask)))
     (run-hook-with-args 'persistent-scratch-before-save-commit-functions tmp-file)
     (rename-file tmp-file actual-file t)
-    (set-buffer-modified-p nil)
+    (dolist (buffer (car saved-state))
+      (with-current-buffer buffer
+        (set-buffer-modified-p nil)))
     (when (called-interactively-p 'interactive)
       (message "Wrote persistent-scratch file %s" actual-file)))
   (unless file
@@ -348,12 +350,16 @@ lexicographically increasing file names when formatted using
                             file))
                         files)))))
 
-(defun persistent-scratch--save-state-to-string ()
-  "Save the current state of scratch buffers to a string."
-  (let ((save-data '()))
+(defun persistent-scratch--save-buffers-state ()
+  "Save the current state of scratch buffers.
+
+The returned value is a cons cell (BUFFER-LIST . STATE-STRING)."
+  (let ((buffers '())
+        (save-data '()))
     (dolist (buffer (buffer-list))
       (with-current-buffer buffer
         (when (funcall persistent-scratch-scratch-buffer-p-function)
+          (push buffer buffers)
           (push (persistent-scratch--get-buffer-state) save-data))))
     (let ((print-quoted t)
           (print-circle t)
@@ -361,7 +367,7 @@ lexicographically increasing file names when formatted using
           (print-escape-newlines nil)
           (print-length nil)
           (print-level nil))
-      (prin1-to-string save-data))))
+      (cons buffers (prin1-to-string save-data)))))
 
 ;; Compatibility shim for Emacs 24.{1, 2}
 (defalias 'persistent-scratch-buffer-narrowed-p
