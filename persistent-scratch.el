@@ -2,7 +2,7 @@
 
 ;; Author: Fanael Linithien <fanael4@gmail.com>
 ;; URL: https://github.com/Fanael/persistent-scratch
-;; Package-Version: 0.3.9
+;; Package-Version: 0.3.10
 ;; Package-Requires: ((emacs "24"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -367,7 +367,7 @@ The returned value is a cons cell (BUFFER-LIST . STATE-STRING)."
           (print-escape-newlines nil)
           (print-length nil)
           (print-level nil))
-      (cons buffers (prin1-to-string save-data)))))
+      (cons buffers (format "%s\n" (prin1-to-string save-data))))))
 
 ;; Compatibility shim for Emacs 24.{1, 2}
 (defalias 'persistent-scratch-buffer-narrowed-p
